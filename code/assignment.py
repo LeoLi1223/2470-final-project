@@ -44,7 +44,7 @@ def main(args):
     with open(args.data, 'rb') as data_file:
         data_dict = pickle.load(data_file)
 
-    feat_prep = lambda x: np.repeat(np.array(x).reshape(-1, 2048), 3000, axis=0)
+    feat_prep = lambda x: np.repeat(np.array(x).reshape(-1, 2048), 50, axis=0)
     # img_prep  = lambda x: np.repeat(x, 5, axis=0)
     train_captions  = np.array(data_dict['train_captions'])
     test_captions   = np.array(data_dict['test_captions'])
