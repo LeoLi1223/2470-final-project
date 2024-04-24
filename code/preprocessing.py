@@ -91,7 +91,7 @@ def load_data(data_folder):
     test_captions = get_all_captions(test_image_names)
 
     #remove special charachters and other nessesary preprocessing
-    window_size = 20
+    window_size = 15
     preprocess_captions(train_captions, window_size)
     preprocess_captions(test_captions, window_size)
 
