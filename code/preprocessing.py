@@ -64,11 +64,10 @@ def load_data(data_folder):
 
     #map each image name to a list containing all 5 of its captons
     image_names_to_captions = {}
+    simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", ""))
     for example in examples:
         l = example.split("\t")
-        img_name, caption = re.sub(r"[\'\.\,\?\!\@\#\$\%\&\*\[\]\{\}\(\)\<\>\/\ñ]", "", l[0].strip().lower()).replace("_", "-").replace(" ", "-").replace("---", "-").replace("--", "-"), l[2]
-        # img_name, caption = re.sub(r"[^\w\s'-]", "", l[0].strip().lower()).replace(" ", "-"), l[2]
-        # re.sub(r"[^\w\s]", "", l[0].strip().lower()).replace(" ", "-")
+        img_name, caption = simplify(l[0]), l[2]
         image_names_to_captions[img_name] = image_names_to_captions.get(img_name, []) + [caption]
 
     #randomly split examples into training and testing sets
@@ -107,8 +106,8 @@ def load_data(data_folder):
                 if word_count[word] <= minimum_frequency:
                     caption[index] = '<unk>'
 
-    unk_captions(train_captions, 20)
-    unk_captions(test_captions, 20)
+    unk_captions(train_captions, 10)
+    unk_captions(test_captions, 10)
 
     # pad captions so they all have equal length
     def pad_captions(captions, window_size):
@@ -129,10 +128,8 @@ def load_data(data_folder):
                 word2idx[word] = vocab_size
                 caption[index] = vocab_size
                 vocab_size += 1
-    print(word2idx)
     for caption in test_captions:
         for index, word in enumerate(caption):
-            print(index, word)
             caption[index] = word2idx[word]
     
     # use ResNet50 to extract image features
