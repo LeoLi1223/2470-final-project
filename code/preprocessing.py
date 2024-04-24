@@ -84,11 +84,24 @@ def load_data(data_folder):
             for caption in captions:
                 to_return.append(caption)
         return to_return
+    
+    def get_part_captions(image_names, n = 50):
+        to_return = []
+        for image in image_names:
+            captions = image_names_to_captions[image]
+            random.shuffle(captions)
+            captions = captions[:n]
+            image_names_to_captions[image] = captions
+            for caption in captions:
+                to_return.append(caption)
+        return to_return
 
 
     # get lists of all the captions in the train and testing set
-    train_captions = get_all_captions(train_image_names)
-    test_captions = get_all_captions(test_image_names)
+    # train_captions = get_all_captions(train_image_names)
+    # test_captions = get_all_captions(test_image_names)
+    train_captions = get_part_captions(train_image_names)
+    test_captions = get_part_captions(test_image_names)
 
     #remove special charachters and other nessesary preprocessing
     window_size = 15
