@@ -65,11 +65,13 @@ def load_data(data_folder):
     #map each image name to a list containing all 5 of its captons
     image_names_to_captions = {}
     simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", ""))
+    num_captions_per_image = 20
     for example in examples:
         l = example.split("\t")
         img_name, caption = simplify(l[0]), l[2]
-        image_names_to_captions[img_name] = image_names_to_captions.get(img_name, []) + [caption]
-
+        if image_names_to_captions.get([img_name]) == None or len(image_names_to_captions[img_name]) < num_captions_per_image:
+            image_names_to_captions[img_name] = image_names_to_captions.get(img_name, []) + [caption]        
+    
     #randomly split examples into training and testing sets
     shuffled_images = list(image_names_to_captions.keys())
     random.seed(0)
