@@ -117,8 +117,8 @@ def load_data(data_folder):
                 if word_count[word] <= minimum_frequency:
                     caption[index] = '<unk>'
 
-    unk_captions(train_captions, 3)
-    unk_captions(test_captions, 3)
+    unk_captions(train_captions, 1)
+    unk_captions(test_captions, 1)
 
     # Function to count the number of <unk> symbols in a caption
     def count_unk_symbols(caption):
@@ -129,7 +129,7 @@ def load_data(data_folder):
       for start in range(0, len(captions), 3000):
         end = start + 3000
         caps = captions[start:end]
-        sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap[0]))
+        sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
         top_captions.extend(sorted_caps[:n])
       return top_captions
 
@@ -155,9 +155,14 @@ def load_data(data_folder):
                 word2idx[word] = vocab_size
                 caption[index] = vocab_size
                 vocab_size += 1
+    if "<unk>" not in word2idx.keys():
+        word2idx["<unk>"] = len(word2idx)
     for caption in test_captions:
         for index, word in enumerate(caption):
-            caption[index] = word2idx[word]
+            if word not in word2idx:
+                caption[index] = word2idx["<unk>"]
+            else:
+                caption[index] = word2idx[word]
 
     # use ResNet50 to extract image features
     print("Getting training embeddings")
