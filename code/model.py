@@ -54,7 +54,7 @@ class ImageCaptionModel(tf.keras.Model):
                 mask = decoder_labels != padding_index
                 num_predictions = tf.reduce_sum(tf.cast(mask, tf.float32))
                 loss = self.loss_function(probs, decoder_labels, mask)
-                accuracy = self.accuracy_function(probs, decoder_labels, mask)
+                accuracy = self.accuracy_function(tf.cast(probs, tf.int64), tf.cast(decoder_labels, tf.int64), mask)
             
             ## update weights
             gradients = tape.gradient(loss, self.trainable_variables)

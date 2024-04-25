@@ -7,6 +7,8 @@ import numpy as np
 import collections
 from tqdm import tqdm
 
+# found_images = {}
+
 def preprocess_captions(captions, window_size):
     for i, caption in enumerate(captions):
         # Taken from:
@@ -31,20 +33,24 @@ def get_image_features(image_names, data_folder, vis_subset=100):
     '''
     image_features = []
     vis_images = []
+    found_image_names = []
     resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
     gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
     pbar = tqdm(image_names)
     for i, image_name in enumerate(pbar):
         img_path = f'{data_folder}/images/{image_name}.jpg'
         pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
-        with Image.open(img_path) as img:
-            img_array = np.array(img.resize((224,224)))
+        try:
+            with Image.open(img_path) as img:
+                img_array = np.array(img.resize((224,224)))
+                found_image_names.append(image_name)
+        except Exception as e:
+            print("Image not found")
         img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
         image_features += [gap(resnet(img_in))]
         if i < vis_subset:
             vis_images += [img_array]
-    print()
-    return image_features, vis_images
+    return image_features, vis_images, found_image_names
 
 
 def load_data(data_folder):
@@ -66,16 +72,16 @@ def load_data(data_folder):
     image_names_to_captions = {}
     simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", ""))
     for example in examples:
-        l = example.split("\t")
-        img_name, caption = simplify(l[0]), l[2]
+        l = example.split(" - ")
+        img_name, caption = simplify(l[0]), l[1]
         image_names_to_captions[img_name] = image_names_to_captions.get(img_name, []) + [caption]
 
     #randomly split examples into training and testing sets
     shuffled_images = list(image_names_to_captions.keys())
     random.seed(0)
     random.shuffle(shuffled_images)
-    train_image_names = shuffled_images[60:]
-    test_image_names = shuffled_images[:60]
+    train_image_names = shuffled_images[400:]
+    test_image_names = shuffled_images[:400]
 
     def get_all_captions(image_names):
         to_return = []
@@ -97,11 +103,19 @@ def load_data(data_folder):
         return to_return
 
 
+    # use ResNet50 to extract image features
+    print("Getting training embeddings")
+    train_image_features, train_images, found_train_images = get_image_features(train_image_names, data_folder)
+    print("Getting testing embeddings")
+    test_image_features,  test_images, found_test_images  = get_image_features(test_image_names, data_folder)
+
+    print(len(found_train_images))
+    print(len(found_test_images))
     # get lists of all the captions in the train and testing set
     # train_captions = get_all_captions(train_image_names)
     # test_captions = get_all_captions(test_image_names)
-    train_captions = get_part_captions(train_image_names)
-    test_captions = get_part_captions(test_image_names)
+    train_captions = get_part_captions(found_train_images)
+    test_captions = get_part_captions(found_test_images)
 
     #remove special charachters and other nessesary preprocessing
     window_size = 15
@@ -144,12 +158,6 @@ def load_data(data_folder):
     for caption in test_captions:
         for index, word in enumerate(caption):
             caption[index] = word2idx[word]
-    
-    # use ResNet50 to extract image features
-    print("Getting training embeddings")
-    train_image_features, train_images = get_image_features(train_image_names, data_folder)
-    print("Getting testing embeddings")
-    test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
 
     return dict(
         train_captions          = np.array(train_captions),
@@ -172,5 +180,5 @@ def create_pickle(data_folder):
 if __name__ == '__main__':
     ## Download this and put the Images and captions.txt indo your ../data directory
     ## Flickr 8k Dataset: https://www.kaggle.com/datasets/adityajn105/flickr8k?resource=download
-    data_folder = '../memes900k'
+    data_folder = '../memes_2'
     create_pickle(data_folder)
