@@ -6,6 +6,7 @@ import tensorflow as tf
 import numpy as np
 import collections
 from tqdm import tqdm
+from functools import cmp_to_key
 
 # found_images = {}
 
@@ -52,6 +53,20 @@ def get_image_features(image_names, data_folder, vis_subset=100):
             vis_images += [img_array]
     return image_features, vis_images, found_image_names
 
+def get_found_image_name(image_names, data_folder):
+    '''
+    Method used to extract the features from the images in the dataset using ResNet50
+    '''
+    found_image_names = []
+    for image_name in image_names:
+        img_path = f'{data_folder}/images/{image_name}.jpg'
+        try:
+            with Image.open(img_path) as img:
+                found_image_names.append(image_name)
+        except Exception as e:
+            print("Image not found")
+    return found_image_names
+
 
 def load_data(data_folder):
     '''
@@ -91,31 +106,47 @@ def load_data(data_folder):
                 to_return.append(caption)
         return to_return
     
-    def get_part_captions(image_names, n = 50):
+    
+    def get_part_captions(image_names, n = 10):
         to_return = []
+        new_image_names = []
         for image in image_names:
             captions = image_names_to_captions[image]
             random.shuffle(captions)
-            captions = captions[:n]
-            image_names_to_captions[image] = captions
-            for caption in captions:
-                to_return.append(caption)
-        return to_return
+            if(len(captions) >= 10):
+                new_image_names.append(image)
+                captions = captions[:n]
+                image_names_to_captions[image] = captions
+                for caption in captions:
+                    to_return.append(caption)
+        return to_return, new_image_names
+    
+    def num_unk(word_list):
+        count = 0
+        for word in word_list:
+            if word == '<unk>':
+                count +=1
+        return count
 
+    def compare(x, y):
+        return num_unk(x) - num_unk(y)
 
-    # use ResNet50 to extract image features
-    print("Getting training embeddings")
-    train_image_features, train_images, found_train_images = get_image_features(train_image_names, data_folder)
-    print("Getting testing embeddings")
-    test_image_features,  test_images, found_test_images  = get_image_features(test_image_names, data_folder)
+    def captions_rank(captions):
+        new_captions = []
+        for i in range(0, int(len(captions)/80)):
+            one_captions = captions[i*80:i*80+80]
+            one_captions = sorted(one_captions, key=cmp_to_key(compare))
+            for j in range(0, 15):
+                new_captions.append(one_captions[j])
+        return new_captions
 
-    print(len(found_train_images))
-    print(len(found_test_images))
+    found_train_images = get_found_image_name(train_image_names, data_folder)
+    found_test_images = get_found_image_name(test_image_names, data_folder)
     # get lists of all the captions in the train and testing set
     # train_captions = get_all_captions(train_image_names)
     # test_captions = get_all_captions(test_image_names)
-    train_captions = get_part_captions(found_train_images)
-    test_captions = get_part_captions(found_test_images)
+    train_captions, train_image_names = get_part_captions(found_train_images)
+    test_captions, test_image_names = get_part_captions(found_test_images)
 
     #remove special charachters and other nessesary preprocessing
     window_size = 15
@@ -133,8 +164,11 @@ def load_data(data_folder):
                 if word_count[word] <= minimum_frequency:
                     caption[index] = '<unk>'
 
-    unk_captions(train_captions, 10)
-    unk_captions(test_captions, 10)
+    unk_captions(train_captions, 3)
+    unk_captions(test_captions, 3)
+
+    #train_captions = captions_rank(train_captions)
+    #test_captions = captions_rank(test_captions)
 
     # pad captions so they all have equal length
     def pad_captions(captions, window_size):
@@ -158,6 +192,13 @@ def load_data(data_folder):
     for caption in test_captions:
         for index, word in enumerate(caption):
             caption[index] = word2idx[word]
+    
+     # use ResNet50 to extract image features
+    print("Getting training embeddings")
+    train_image_features, train_images, found_train_images = get_image_features(train_image_names, data_folder)
+    print("Getting testing embeddings")
+    test_image_features,  test_images, found_test_images  = get_image_features(test_image_names, data_folder)
+
 
     return dict(
         train_captions          = np.array(train_captions),
