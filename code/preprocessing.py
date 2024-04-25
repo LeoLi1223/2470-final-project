@@ -85,23 +85,23 @@ def load_data(data_folder):
                 to_return.append(caption)
         return to_return
     
-    def get_part_captions(image_names, n = 50):
-        to_return = []
-        for image in image_names:
-            captions = image_names_to_captions[image]
-            random.shuffle(captions)
-            captions = captions[:n]
-            image_names_to_captions[image] = captions
-            for caption in captions:
-                to_return.append(caption)
-        return to_return
+    # def get_part_captions(image_names, n = 200):
+    #     to_return = []
+    #     for image in image_names:
+    #         captions = image_names_to_captions[image]
+    #         random.shuffle(captions)
+    #         captions = captions[:n]
+    #         image_names_to_captions[image] = captions
+    #         for caption in captions:
+    #             to_return.append(caption)
+    #     return to_return
 
 
     # get lists of all the captions in the train and testing set
-    # train_captions = get_all_captions(train_image_names)
-    # test_captions = get_all_captions(test_image_names)
-    train_captions = get_part_captions(train_image_names)
-    test_captions = get_part_captions(test_image_names)
+    train_captions = get_all_captions(train_image_names)
+    test_captions = get_all_captions(test_image_names)
+    # train_captions = get_part_captions(train_image_names)
+    # test_captions = get_part_captions(test_image_names)
 
     #remove special charachters and other nessesary preprocessing
     window_size = 15
@@ -119,8 +119,23 @@ def load_data(data_folder):
                 if word_count[word] <= minimum_frequency:
                     caption[index] = '<unk>'
 
-    unk_captions(train_captions, 10)
-    unk_captions(test_captions, 10)
+    unk_captions(train_captions, 3)
+    unk_captions(test_captions, 3)
+    
+    def count_unk_symbols(caption):
+        return caption.count("<unk>")
+
+    def get_part_captions(captions, n=50):
+      top_captions = []
+      for start in range(0, len(captions), 3000):
+        end = start + 3000
+        caps = captions[start:end]
+        sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
+        top_captions.extend(sorted_caps[:n])
+      return top_captions
+
+    train_captions = get_part_captions(train_captions)
+    test_captions = get_part_captions(test_captions)
 
     # pad captions so they all have equal length
     def pad_captions(captions, window_size):
@@ -141,9 +156,16 @@ def load_data(data_folder):
                 word2idx[word] = vocab_size
                 caption[index] = vocab_size
                 vocab_size += 1
+    if "<unk>" not in word2idx.keys():
+        word2idx["<unk>"] = vocab_size
+        vocab_size += 1
     for caption in test_captions:
         for index, word in enumerate(caption):
-            caption[index] = word2idx[word]
+            # caption[index] = word2idx[word]
+            if word in word2idx:
+                caption[index] = word2idx[word]
+            else:
+                caption[index] = word2idx["<unk>"]
     
     # use ResNet50 to extract image features
     print("Getting training embeddings")
