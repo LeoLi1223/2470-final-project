@@ -218,7 +218,7 @@ class PositionalEncoding(tf.keras.layers.Layer):
         ## TODO: Implement Component
 
         ## Embed labels into an optimizable embedding space
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size) ##TODO: replace with GloVE
 
         ## Implement sinosoidal positional encoding: offset by varying sinosoidal frequencies. 
         ## HINT: May want to use the function above...

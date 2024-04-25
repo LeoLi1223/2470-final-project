@@ -6,6 +6,7 @@ import tensorflow as tf
 import numpy as np
 import collections
 from tqdm import tqdm
+from read_glove import get_glove_embedding
 
 def preprocess_captions(captions, window_size):
     for i, caption in enumerate(captions):
@@ -46,6 +47,26 @@ def get_image_features(image_names, data_folder, vis_subset=100):
     print()
     return image_features, vis_images
 
+def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
+    '''
+    Method used to extract the features from the images in the dataset using ResNet50
+    '''
+    image_features = []
+    vis_images = []
+    inception = tf.keras.applications.InceptionV3(False)  ## Produces Bx8x8x2048
+    gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
+    pbar = tqdm(image_names)
+    for i, image_name in enumerate(pbar):
+        img_path = f'{data_folder}/images/{image_name}.jpg'
+        pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D Inception V3 GAP Vector")
+        with Image.open(img_path) as img:
+            img_array = np.array(img.resize((299,299)))
+        img_in = tf.keras.applications.inception_v3.preprocess_input(img_array)[np.newaxis, :]
+        image_features += [gap(inception(img_in))]
+        if i < vis_subset:
+            vis_images += [img_array]
+    print()
+    return image_features, vis_images
 
 def load_data(data_folder):
     '''
@@ -156,7 +177,8 @@ def load_data(data_folder):
                 caption[index] = vocab_size
                 vocab_size += 1
     if "<unk>" not in word2idx.keys():
-        word2idx["<unk>"] = len(word2idx)
+        word2idx["<unk>"] = vocab_size
+        vocab_size += 1
     for caption in test_captions:
         for index, word in enumerate(caption):
             if word not in word2idx:
@@ -166,10 +188,12 @@ def load_data(data_folder):
 
     # use ResNet50 to extract image features
     print("Getting training embeddings")
-    train_image_features, train_images = get_image_features(train_image_names, data_folder)
+    # train_image_features, train_images = get_image_features(train_image_names, data_folder)
+    train_image_features, train_images = get_image_features_inceptionV3(train_image_names, data_folder)
     print("Getting testing embeddings")
-    test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
-
+    # test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
+    test_image_features,  test_images  = get_image_features_inceptionV3(test_image_names, data_folder)
+    
     return dict(
         train_captions          = np.array(train_captions),
         test_captions           = np.array(test_captions),

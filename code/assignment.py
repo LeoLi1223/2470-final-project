@@ -5,6 +5,7 @@ import pickle
 import tensorflow as tf
 from typing import Optional
 from types import SimpleNamespace
+from read_glove import get_glove_embedding
 
 
 from model import ImageCaptionModel, accuracy_function, loss_function
@@ -28,7 +29,7 @@ def parse_args(args=None):
     parser.add_argument('--lr',             type=float, default=1e-3,   help='Model\'s learning rate')
     parser.add_argument('--optimizer',      type=str,   default='adam', choices=['adam', 'rmsprop', 'sgd'], help='Model\'s optimizer')
     parser.add_argument('--batch_size',     type=int,   default=100,    help='Model\'s batch size.')
-    parser.add_argument('--hidden_size',    type=int,   default=256,    help='Hidden size used to instantiate the model.')
+    parser.add_argument('--hidden_size',    type=int,   default=300,    help='Hidden size used to instantiate the model.')
     parser.add_argument('--window_size',    type=int,   default=20,     help='Window size of text entries.')
     parser.add_argument('--chkpt_path',     default='',                 help='where the model checkpoint is')
     parser.add_argument('--check_valid',    default=True,               action="store_true",  help='if training, also print validation after each epoch')
@@ -36,6 +37,26 @@ def parse_args(args=None):
         return parser.parse_args()      ## For calling through command line
     return parser.parse_args(args)      ## For calling through notebook.
 
+def get_embedding_matrix(word2idx):
+    embeddings_index = get_glove_embedding("../GloVE/glove.6B.300d.txt")
+    num_tokens = len(word2idx)
+    embedding_dim = 300
+    hits = 0
+    misses = 0
+    # Prepare embedding matrix
+    embedding_matrix = np.zeros((num_tokens, embedding_dim))
+    for word, i in word2idx.items():
+        embedding_vector = embeddings_index.get(word)
+        if embedding_vector is not None:
+            # Words not found in embedding index will be all-zeros.
+            # This includes the representation for "<start>" and "<end>" and "<unk>" and "<pad>"
+            embedding_matrix[i] = embedding_vector
+            hits += 1
+        else:
+            embedding_matrix[i] = tf.random.normal((embedding_dim, ))
+            misses += 1
+    print("Converted %d words (%d misses)" % (hits, misses))
+    return embedding_matrix
 
 def main(args):
 
@@ -68,7 +89,8 @@ def main(args):
         decoder = decoder_class(
             vocab_size  = len(word2idx), 
             hidden_size = args.hidden_size, 
-            window_size = args.window_size
+            window_size = args.window_size,
+            embedding_matrix = get_embedding_matrix(word2idx)
         )
         
         model = ImageCaptionModel(decoder)
