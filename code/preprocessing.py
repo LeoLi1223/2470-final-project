@@ -26,26 +26,26 @@ def preprocess_captions(captions, window_size):
         # Replace the old caption in the captions list with this new cleaned caption
         captions[i] = caption_new
 
-def get_image_features(image_names, data_folder, vis_subset=100):
-    '''
-    Method used to extract the features from the images in the dataset using ResNet50
-    '''
-    image_features = []
-    vis_images = []
-    resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
-    gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
-    pbar = tqdm(image_names)
-    for i, image_name in enumerate(pbar):
-        img_path = f'{data_folder}/images/{image_name}.jpg'
-        pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
-        with Image.open(img_path) as img:
-            img_array = np.array(img.resize((224,224)))
-        img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
-        image_features += [gap(resnet(img_in))]
-        if i < vis_subset:
-            vis_images += [img_array]
-    print()
-    return image_features, vis_images
+# def get_image_features(image_names, data_folder, vis_subset=100):
+#     '''
+#     Method used to extract the features from the images in the dataset using ResNet50
+#     '''
+#     image_features = []
+#     vis_images = []
+#     resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
+#     gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
+#     pbar = tqdm(image_names)
+#     for i, image_name in enumerate(pbar):
+#         img_path = f'{data_folder}/images/{image_name}.jpg'
+#         pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
+#         with Image.open(img_path) as img:
+#             img_array = np.array(img.resize((224,224)))
+#         img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
+#         image_features += [gap(resnet(img_in))]
+#         if i < vis_subset:
+#             vis_images += [img_array]
+#     print()
+#     return image_features, vis_images
 
 def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
     '''
@@ -213,7 +213,5 @@ def create_pickle(data_folder):
 
 
 if __name__ == '__main__':
-    ## Download this and put the Images and captions.txt indo your ../data directory
-    ## Flickr 8k Dataset: https://www.kaggle.com/datasets/adityajn105/flickr8k?resource=download
     data_folder = '../memes900k'
     create_pickle(data_folder)

@@ -59,8 +59,6 @@ class TransformerDecoder(tf.keras.Model):
         self.window_size = window_size
         self.embedding_matrix = embedding_matrix
 
-        # TODO: Define image and positional encoding, transformer decoder, and classification layers
-
         # Define feed forward layer(s) to embed image features into a vector 
         self.image_embedding = tf.keras.layers.Dense(hidden_size)
 
