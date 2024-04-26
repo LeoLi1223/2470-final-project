@@ -57,6 +57,7 @@ class TransformerDecoder(tf.keras.Model):
         self.vocab_size  = vocab_size
         self.hidden_size = hidden_size
         self.window_size = window_size
+        self.embedding_matrix = embedding_matrix
 
         # TODO: Define image and positional encoding, transformer decoder, and classification layers
 
@@ -64,7 +65,7 @@ class TransformerDecoder(tf.keras.Model):
         self.image_embedding = tf.keras.layers.Dense(hidden_size)
 
         # Define positional encoding to embed and offset layer for language:
-        self.encoding = PositionalEncoding(vocab_size, hidden_size, window_size)
+        self.encoding = PositionalEncoding(vocab_size, hidden_size, window_size, self.embedding_matrix)
 
         # Define transformer decoder layer:
         self.decoder = TransformerBlock(hidden_size, multiheaded=True)
