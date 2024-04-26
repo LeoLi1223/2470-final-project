@@ -15,7 +15,7 @@ class RNNDecoder(tf.keras.layers.Layer):
         self.vocab_size  = vocab_size
         self.hidden_size = hidden_size
         self.window_size = window_size
-        self.embedding = embedding_matrix
+        self.embedding_matrix = embedding_matrix
 
         # TODO:
         # Now we will define image and word embedding, decoder, and classification layers
@@ -27,7 +27,7 @@ class RNNDecoder(tf.keras.layers.Layer):
         # Define english embedding layer:
         self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.hidden_size, trainable=True) ##TODO: replace with GloVE
         self.embedding.build((1,))
-        self.embedding.set_weights([embedding_matrix])
+        self.embedding.set_weights([self.embedding_matrix])
 
         # Define decoder layer that handles language and image context:     
         self.decoder = tf.keras.layers.LSTM(self.hidden_size, return_sequences=True)

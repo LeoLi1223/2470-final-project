@@ -138,8 +138,8 @@ def load_data(data_folder):
                 if word_count[word] <= minimum_frequency:
                     caption[index] = '<unk>'
 
-    unk_captions(train_captions, 1)
-    unk_captions(test_captions, 1)
+    unk_captions(train_captions, 3)
+    unk_captions(test_captions, 3)
 
     # Function to count the number of <unk> symbols in a caption
     def count_unk_symbols(caption):
