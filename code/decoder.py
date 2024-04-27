@@ -72,7 +72,6 @@ class TransformerDecoder(tf.keras.Model):
         self.classifier = tf.keras.layers.Dense(vocab_size)
 
     def call(self, encoded_images, captions):
-        # TODO:
         # 1) Embed the encoded images into a vector (HINT IN NOTEBOOK)
         # 2) Pass the captions through your positional encoding layer
         # 3) Pass the english embeddings and the image sequences to the decoder
@@ -89,5 +88,6 @@ class TransformerDecoder(tf.keras.Model):
             'vocab_size': self.vocab_size,
             'hidden_size': self.hidden_size,
             'window_size': self.window_size,
+            'embedding_matrix': self.embedding_matrix,
         })
         return config

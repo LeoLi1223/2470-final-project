@@ -30,14 +30,10 @@ class ImageCaptionModel(tf.keras.Model):
         :return: None
         """
 
-        ## TODO: Implement similar to test below.
-
         ## NOTE: shuffle the training examples (perhaps using tf.random.shuffle on a
         ##       range of indices spanning # of training entries, then tf.gather) 
         ##       to make training smoother over multiple epochs.
 
-        ## NOTE: make sure you are calculating gradients and optimizing as appropriate
-        ##       (similar to batch_step from HW2)
         total_loss = total_seen = total_correct = 0
         shuffled_indices = tf.random.shuffle(tf.range(0, len(train_captions)))
         print(len(train_captions), len(train_image_features))
@@ -54,7 +50,7 @@ class ImageCaptionModel(tf.keras.Model):
                 mask = decoder_labels != padding_index
                 num_predictions = tf.reduce_sum(tf.cast(mask, tf.float32))
                 loss = self.loss_function(probs, decoder_labels, mask)
-                accuracy = self.accuracy_function(probs, decoder_labels, mask)
+                accuracy = self.accuracy_function(probs, tf.cast(decoder_labels, dtype=tf.int64), mask)
             
             ## update weights
             gradients = tape.gradient(loss, self.trainable_variables)
@@ -105,7 +101,7 @@ class ImageCaptionModel(tf.keras.Model):
             mask = decoder_labels != padding_index
             num_predictions = tf.reduce_sum(tf.cast(mask, tf.float32))
             loss = self.loss_function(probs, decoder_labels, mask)
-            accuracy = self.accuracy_function(probs, decoder_labels, mask)
+            accuracy = self.accuracy_function(probs, tf.cast(decoder_labels, dtype=tf.int64), mask)
 
             ## Compute and report on aggregated statistics
             total_loss += loss
