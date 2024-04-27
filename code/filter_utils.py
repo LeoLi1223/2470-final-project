@@ -5,9 +5,10 @@ import numpy as np
 from scipy.special import softmax
 import csv
 import urllib.request
+import os
 
 
-def print_captions_and_label(captions, task):
+def print_captions_and_label(captions: list[str], task: str):
   MODEL = f"cardiffnlp/twitter-roberta-base-{task}"
   tokenizer = AutoTokenizer.from_pretrained(MODEL)
 
@@ -19,16 +20,16 @@ def print_captions_and_label(captions, task):
       csvreader = csv.reader(html, delimiter='\t')
   labels = [row[1] for row in csvreader if len(row) > 1]
 
-  # PT
-  model = AutoModelForSequenceClassification.from_pretrained(MODEL)
+  # TF
+  model = TFAutoModelForSequenceClassification.from_pretrained(MODEL)
   model.save_pretrained(MODEL)
 
-  for caption in tra_captions:
+  for caption in captions:
     print(caption)
     text = caption
-    encoded_input = tokenizer(text, return_tensors='pt')
-    output = model(**encoded_input)
-    scores = output[0][0].detach().numpy()
+    encoded_input = tokenizer(text, return_tensors='tf')
+    output = model(encoded_input)
+    scores = output[0][0].numpy()
     scores = softmax(scores)
 
     # ranking
@@ -39,3 +40,6 @@ def print_captions_and_label(captions, task):
         s = scores[ranking[i]]
         print(f"{i+1}) {l} {np.round(float(s), 4)}")
     print()
+
+if __name__ == "__main__":
+    print_captions_and_label(["hey girl, you are mean"], "offensive")
