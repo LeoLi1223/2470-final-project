@@ -57,10 +57,6 @@ class AttentionHead(tf.keras.layers.Layer):
         super(AttentionHead, self).__init__(**kwargs)
         self.use_mask = is_self_attention
 
-        # TODO:
-        # Initialize the weight matrices for K, V, and Q.
-        # They should be able to multiply an input_size vector to produce an output_size vector
-        # Hint: use self.add_weight(...)
         self.K = self.add_weight(shape=(input_size, output_size), name="K")
         self.Q = self.add_weight(shape=(input_size, output_size), name="Q")
         self.V = self.add_weight(shape=(input_size, output_size), name="V")
@@ -143,10 +139,6 @@ class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self, emb_sz, multiheaded=False, **kwargs):
         super(TransformerBlock, self).__init__(**kwargs)
 
-        # TODO:
-        # 1) Define the Feed Forward, self-attention, encoder-decoder-attention, and layer normalization layers
-        # 2) For 2470 students, use multiheaded attention
-
         self.ff_layer = tf.keras.layers.Dense(emb_sz)
 
         self.self_atten         = AttentionHead(emb_sz, emb_sz, True)  if not multiheaded else MultiHeadedAttention(emb_sz, True)
@@ -197,7 +189,6 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 def positional_encoding(length, depth):
     ## REFERENCE: https://www.tensorflow.org/text/tutorials/transformer#the_embedding_and_positional_encoding_layer
-    ## TODO: Can remove signature
     depth = depth/2
     ## Generate a range of positions and depths 
     positions = np.arange(length)[:, np.newaxis]    # (seq, 1)
@@ -211,14 +202,16 @@ def positional_encoding(length, depth):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, vocab_size, embed_size, window_size):
+    def __init__(self, vocab_size, embed_size, window_size, embedding_matrix):
         super().__init__()
         self.embed_size = embed_size
-
-        ## TODO: Implement Component
+        self.vocab_size = vocab_size
 
         ## Embed labels into an optimizable embedding space
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
+        # self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.embed_size)
+        self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.embed_size, trainable=True)
+        self.embedding.build((1,))
+        self.embedding.set_weights([self.embedding_matrix])
 
         ## Implement sinosoidal positional encoding: offset by varying sinosoidal frequencies. 
         ## HINT: May want to use the function above...
