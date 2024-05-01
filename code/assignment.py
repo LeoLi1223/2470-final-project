@@ -5,21 +5,11 @@ import pickle
 import tensorflow as tf
 from typing import Optional
 from types import SimpleNamespace
-
-
 from model import ImageCaptionModel, accuracy_function, loss_function
 from decoder import TransformerDecoder, RNNDecoder
 import transformer
 
-
 def parse_args(args=None):
-    """ 
-    Perform command-line argument parsing (other otherwise parse arguments with defaults). 
-    To parse in an interative context (i.e. in notebook), add required arguments.
-    These will go into args and will generate a list that can be passed in.
-    For example: 
-        parse_args('--type', 'rnn', ...)
-    """
     parser = argparse.ArgumentParser(description="Let's train some neural nets!", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--type',           required=True,              choices=['rnn', 'transformer'],     help='Type of model to train')
     parser.add_argument('--task',           required=True,              choices=['train', 'test', 'both'],  help='Task to run')
