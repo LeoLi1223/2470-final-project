@@ -1,5 +1,22 @@
 import numpy as np
 import tensorflow as tf
+from transformers import AutoModelForSequenceClassification
+from transformers import TFAutoModelForSequenceClassification
+from transformers import AutoTokenizer
+from scipy.special import softmax
+import csv
+import urllib.request
+
+task = 'offensive'
+MODEL_OFFENSIVE = f"cardiffnlp/twitter-roberta-base-{task}"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_OFFENSIVE)
+
+labels=[]
+mapping_link = f"https://raw.githubusercontent.com/cardiffnlp/tweeteval/main/datasets/{task}/mapping.txt"
+with urllib.request.urlopen(mapping_link) as f:
+    html = f.read().decode('utf-8').split("\n")
+    csvreader = csv.reader(html, delimiter='\t')
+labels = [row[1] for row in csvreader if len(row) > 1]
 
 class ImageCaptionModel(tf.keras.Model):
 
@@ -120,6 +137,69 @@ class ImageCaptionModel(tf.keras.Model):
         print()        
         return avg_prp, avg_acc
     
+    def get_offensive_score(self, text):
+        # TF
+        model = TFAutoModelForSequenceClassification.from_pretrained(MODEL_OFFENSIVE)
+        model.save_pretrained(MODEL_OFFENSIVE)
+
+        encoded_input = tokenizer(text, return_tensors='tf')
+        output = model(encoded_input)
+        scores = output[0][0].numpy()
+        scores = softmax(scores)
+
+        ranking = np.argsort(scores)
+        ranking = ranking[::-1]
+        for i in range(scores.shape[0]):
+            l = labels[ranking[i]]
+            s = scores[ranking[i]]
+        return np.round(float(s), 4)
+
+    def gen_caption_temperature(self, image_embedding, wordToIds, padID, temp, window_length):
+        """
+        Function used to generate a caption using an ImageCaptionModel given
+        an image embedding. 
+        """
+        idsToWords = {id: word for word, id in wordToIds.items()}
+        unk_token = wordToIds['<unk>']
+        caption_so_far = [wordToIds['<start>']]
+        while len(caption_so_far) < window_length and caption_so_far[-1] != wordToIds['<end>']:
+            caption_input = np.array([caption_so_far + ((window_length - len(caption_so_far)) * [padID])])
+            logits = self(np.expand_dims(image_embedding, 0), caption_input)
+            logits = logits[0][len(caption_so_far) - 1]
+            probs = tf.nn.softmax(logits / temp).numpy()
+            next_token = unk_token
+            attempts = 0
+            while next_token == unk_token and attempts < 5:
+                next_token = np.random.choice(len(probs), p=probs)
+                attempts += 1
+            caption_so_far.append(next_token)
+        return ' '.join([idsToWords[x] for x in caption_so_far][1:-1])
+
+    def get_filtered_captions(self, image_embedding, wordToIds, padID, window_length):
+        """
+        Function used to generate a caption using an ImageCaptionModel given
+        an image embedding. 
+        """
+        temp = 0.05
+        while temp < 0.2:
+            text = self.gen_caption_temperature(image_embedding, wordToIds, padID, temp, window_length)
+            offensive_score = self.get_offensive_score(text)
+            if offensive_score > 0.5:
+                temp = temp + 0.05
+            else:
+                return text, offensive_score
+        return text, offensive_score
+    
+    def get_unfiltered_captions(self, image_embedding, wordToIds, padID, window_length):
+        """
+        Function used to generate a caption using an ImageCaptionModel given
+        an image embedding. 
+        """
+        temp = 0.05
+        text = self.gen_caption_temperature(image_embedding, wordToIds, padID, temp, window_length)
+        offensive_score = self.get_offensive_score(text)
+        return text, offensive_score
+
     def get_config(self):
         base_config = super().get_config()
         config = {
