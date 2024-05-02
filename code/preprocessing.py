@@ -104,7 +104,7 @@ def load_data(data_folder):
     # test_captions = get_part_captions(test_image_names)
 
     #remove special charachters and other nessesary preprocessing
-    window_size = 15
+    window_size = 20
     preprocess_captions(train_captions, window_size)
     preprocess_captions(test_captions, window_size)
 
@@ -133,6 +133,16 @@ def load_data(data_folder):
         sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
         top_captions.extend(sorted_caps[:n])
       return top_captions
+    
+    # def get_part_captions(captions, n=50):
+    #   top_captions = []
+    #   for start in range(0, len(captions), 3000):
+    #     end = start + 3000
+    #     caps = captions[start:end]
+    #     filtered_captions = [caption for caption in caps if count_unk_symbols(caption) <= 2]
+    #     random.shuffle(filtered_captions)
+    #     top_captions.extend(filtered_captions[:n])
+    #   return top_captions
 
     train_captions = get_part_captions(train_captions)
     test_captions = get_part_captions(test_captions)
