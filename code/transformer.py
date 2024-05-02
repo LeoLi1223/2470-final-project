@@ -57,10 +57,6 @@ class AttentionHead(tf.keras.layers.Layer):
         super(AttentionHead, self).__init__(**kwargs)
         self.use_mask = is_self_attention
 
-        # TODO:
-        # Initialize the weight matrices for K, V, and Q.
-        # They should be able to multiply an input_size vector to produce an output_size vector
-        # Hint: use self.add_weight(...)
         self.K = self.add_weight(shape=(input_size, output_size), name="K")
         self.Q = self.add_weight(shape=(input_size, output_size), name="Q")
         self.V = self.add_weight(shape=(input_size, output_size), name="V")
@@ -108,31 +104,9 @@ class MultiHeadedAttention(tf.keras.layers.Layer):
 
     @tf.function
     def call(self, inputs_for_keys, inputs_for_values, inputs_for_queries):
-        """
-        TODO: FOR CS2470 STUDENTS:
-
-        This functions runs a multiheaded attention layer.
-
-        Requirements:
-            - Splits data for 3 different heads of size embed_sz/3
-            - Create three different attention heads
-            - Concatenate the outputs of these heads together
-            - Apply a linear layer
-
-        :param inputs_for_keys: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_values: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_queries: tensor of [batch_size x QUERY_WINDOW_SIZE x input_size ]
-        :return: tensor of [BATCH_SIZE x QUERY_WINDOW_SIZE x output_size ]
-        """
-        # print("inputs_for_keys", inputs_for_keys.shape)
-        # print("inputs_for_values", inputs_for_values.shape)
-        # print("inputs_for_queries", inputs_for_queries.shape)
         o1 = self.h1(inputs_for_keys, inputs_for_values, inputs_for_queries)
         o2 = self.h2(inputs_for_keys, inputs_for_values, inputs_for_queries)
         o3 = self.h3(inputs_for_keys, inputs_for_values, inputs_for_queries)
-        # print(o1.shape)
-        # print(o2.shape)
-        # print(o3.shape)
         concat = tf.concat([o1, o2, o3], -1)
         # print(concat.shape)
         out = self.ff(concat)
@@ -142,10 +116,6 @@ class MultiHeadedAttention(tf.keras.layers.Layer):
 class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self, emb_sz, multiheaded=False, **kwargs):
         super(TransformerBlock, self).__init__(**kwargs)
-
-        # TODO:
-        # 1) Define the Feed Forward, self-attention, encoder-decoder-attention, and layer normalization layers
-        # 2) For 2470 students, use multiheaded attention
 
         self.ff_layer = tf.keras.layers.Dense(emb_sz)
 
@@ -197,7 +167,6 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 def positional_encoding(length, depth):
     ## REFERENCE: https://www.tensorflow.org/text/tutorials/transformer#the_embedding_and_positional_encoding_layer
-    ## TODO: Can remove signature
     depth = depth/2
     ## Generate a range of positions and depths 
     positions = np.arange(length)[:, np.newaxis]    # (seq, 1)
@@ -211,17 +180,17 @@ def positional_encoding(length, depth):
 
 
 class PositionalEncoding(tf.keras.layers.Layer):
-    def __init__(self, vocab_size, embed_size, window_size):
+    def __init__(self, vocab_size, embed_size, window_size, embedding_matrix):
         super().__init__()
         self.embed_size = embed_size
-
-        ## TODO: Implement Component
+        self.vocab_size = vocab_size
 
         ## Embed labels into an optimizable embedding space
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embed_size)
+        # self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.embed_size)
+        self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.embed_size, trainable=True)
+        self.embedding.build((1,))
+        self.embedding.set_weights([embedding_matrix])
 
-        ## Implement sinosoidal positional encoding: offset by varying sinosoidal frequencies. 
-        ## HINT: May want to use the function above...
         self.pos_encoding = positional_encoding(window_size, embed_size)
 
     def call(self, x):
