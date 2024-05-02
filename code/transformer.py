@@ -17,11 +17,12 @@ class AttentionMatrix(tf.keras.layers.Layer):
         mask = tf.convert_to_tensor(value=mask_vals, dtype=tf.float32)
         atten_mask = tf.tile(tf.reshape(mask, [-1, window_size_queries, window_size_keys]), [tf.shape(input=K)[0], 1, 1])
 
-        atten_matrix = tf.matmul(Q, K, transpose_b=True) / tf.sqrt(tf.cast(K.get_shape()[2], dtype=tf.float32))
+        d_k = tf.cast(K.get_shape()[2], tf.float32)
+        scores = (tf.matmul(Q, K, transpose_b=True) / tf.math.sqrt(d_k))
         if self.use_mask == True:
-            atten_matrix += atten_mask
-        atten_matrix = tf.nn.softmax(atten_matrix)
-        return atten_matrix
+            scores = scores + atten_mask
+        scores = tf.nn.softmax(scores)
+        return scores
 
 
 class AttentionHead(tf.keras.layers.Layer):
@@ -29,85 +30,38 @@ class AttentionHead(tf.keras.layers.Layer):
         super(AttentionHead, self).__init__(**kwargs)
         self.use_mask = is_self_attention
 
-        # TODO:
-        # Initialize the weight matrices for K, V, and Q.
-        # They should be able to multiply an input_size vector to produce an output_size vector
-        # Hint: use self.add_weight(...)
-        self.K = self.add_weight(shape=(input_size, output_size), name="K")
-        self.Q = self.add_weight(shape=(input_size, output_size), name="Q")
-        self.V = self.add_weight(shape=(input_size, output_size), name="V")
+        self.K = self.add_weight("K", shape=[input_size, output_size])
+        self.Q = self.add_weight("Q", shape=[input_size, output_size])
+        self.V = self.add_weight("V", shape=[input_size, output_size])
         self.attn_mtx = AttentionMatrix(use_mask=self.use_mask)
-
 
     @tf.function
     def call(self, inputs_for_keys, inputs_for_values, inputs_for_queries):
-        """
-        STUDENT MUST WRITE:
+        K = tf.tensordot(inputs_for_keys, self.K, 1)
+        V = tf.tensordot(inputs_for_values, self.V, 1)
+        Q = tf.tensordot(inputs_for_queries, self.Q, 1)
 
-        This functions runs a single attention head.
-
-        :param inputs_for_keys: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_values: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_queries: tensor of [batch_size x QUERY_WINDOW_SIZE x input_size ]
-        :return: tensor of [BATCH_SIZE x QUERY_WINDOW_SIZE x output_size ]
-        """
-
-        # TODO:
-        # - Apply 3 matrix products to turn inputs into keys, values, and queries. 
-        # - You will need to use tf.tensordot for this.
-        # - Call your AttentionMatrix layer with the keys and queries.
-        # - Apply the attention matrix to the values.
-
-        K = tf.tensordot(inputs_for_keys, self.K, axes=1)
-        V = tf.tensordot(inputs_for_values, self.V, axes=1)
-        Q = tf.tensordot(inputs_for_queries, self.Q, axes=1)
-
-        atten_mtx = self.attn_mtx((K, Q))
-        out = tf.matmul(atten_mtx, V)
-
-        return out
+        scores = self.attn_mtx((K, Q))
+        weighted = tf.matmul(scores, V)
+        return weighted
 
 
 class MultiHeadedAttention(tf.keras.layers.Layer):
     def __init__(self, emb_sz, use_mask, **kwargs):
         super(MultiHeadedAttention, self).__init__(**kwargs)
 
-        ## TODO: Add 3 heads as appropriate and any other necessary components
-        self.h1 = AttentionHead(emb_sz, emb_sz//3, True)
-        self.h2 = AttentionHead(emb_sz, emb_sz//3, True)
-        self.h3 = AttentionHead(emb_sz, emb_sz//3, True)
-        self.ff = tf.keras.layers.Dense(emb_sz)
+        self.h1 = AttentionHead(emb_sz, int(emb_sz / 3), use_mask)
+        self.h2 = AttentionHead(emb_sz, int(emb_sz / 3), use_mask)
+        self.h3 = AttentionHead(emb_sz, int(emb_sz / 3), use_mask)
+        self.linear = tf.keras.layers.Dense(emb_sz)
 
     @tf.function
     def call(self, inputs_for_keys, inputs_for_values, inputs_for_queries):
-        """
-        TODO: FOR CS2470 STUDENTS:
-
-        This functions runs a multiheaded attention layer.
-
-        Requirements:
-            - Splits data for 3 different heads of size embed_sz/3
-            - Create three different attention heads
-            - Concatenate the outputs of these heads together
-            - Apply a linear layer
-
-        :param inputs_for_keys: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_values: tensor of [batch_size x KEY_WINDOW_SIZE x input_size ]
-        :param inputs_for_queries: tensor of [batch_size x QUERY_WINDOW_SIZE x input_size ]
-        :return: tensor of [BATCH_SIZE x QUERY_WINDOW_SIZE x output_size ]
-        """
-        # print("inputs_for_keys", inputs_for_keys.shape)
-        # print("inputs_for_values", inputs_for_values.shape)
-        # print("inputs_for_queries", inputs_for_queries.shape)
         o1 = self.h1(inputs_for_keys, inputs_for_values, inputs_for_queries)
         o2 = self.h2(inputs_for_keys, inputs_for_values, inputs_for_queries)
         o3 = self.h3(inputs_for_keys, inputs_for_values, inputs_for_queries)
-        # print(o1.shape)
-        # print(o2.shape)
-        # print(o3.shape)
-        concat = tf.concat([o1, o2, o3], -1)
-        # print(concat.shape)
-        out = self.ff(concat)
+        concat = tf.concat([o1, o2, o3], axis=-1)
+        out = self.linear(concat)
         return out
 
 
@@ -115,7 +69,11 @@ class TransformerBlock(tf.keras.layers.Layer):
     def __init__(self, emb_sz, multiheaded=False, **kwargs):
         super(TransformerBlock, self).__init__(**kwargs)
 
-        self.ff_layer = tf.keras.layers.Dense(emb_sz)
+        #self.ff_layer = tf.keras.layers.Dense(emb_sz)
+        self.ff_layer = tf.keras.Sequential([
+            tf.keras.layers.Dense(2048, activation="relu"),
+            tf.keras.layers.Dense(emb_sz)
+        ])
 
         self.self_atten         = AttentionHead(emb_sz, emb_sz, True)  if not multiheaded else MultiHeadedAttention(emb_sz, True)
         self.self_context_atten = AttentionHead(emb_sz, emb_sz, False) if not multiheaded else MultiHeadedAttention(emb_sz, False)
@@ -146,11 +104,11 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 
 def positional_encoding(length, depth):
-    depth = depth/2
-    positions = np.arange(length)[:, np.newaxis]    # (seq, 1)
-    depths = np.arange(depth)[np.newaxis, :]/depth  # (1, depth)
-    angle_rates = 1 / (10000**depths)               # (1, depth)
-    angle_rads = positions * angle_rates            # (pos, depth)
+    depth = depth / 2
+    positions = np.arange(length)[:, np.newaxis]      # (seq, 1)
+    depths = np.arange(depth)[np.newaxis, :] / depth  # (1, depth)
+    angle_rates = 1 / (10000 ** depths)               # (1, depth)
+    angle_rads = positions * angle_rates              # (pos, depth)
     pos_encoding = np.concatenate([np.sin(angle_rads), np.cos(angle_rads)], axis=-1) 
     return tf.cast(pos_encoding, dtype=tf.float32)
 
