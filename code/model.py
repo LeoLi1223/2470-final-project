@@ -7,6 +7,7 @@ import numpy as np
 from scipy.special import softmax
 import csv
 import urllib.request
+from groberta import Groberta
 
 
 task='offensive'
@@ -119,12 +120,7 @@ class ImageCaptionModel(tf.keras.Model):
         scores = output[0][0].numpy()
         scores = softmax(scores)
 
-        ranking = np.argsort(scores)
-        ranking = ranking[::-1]
-        for i in range(scores.shape[0]):
-            l = labels[ranking[i]]
-            s = scores[ranking[i]]
-        return np.round(float(s), 4)
+        return scores[1]
 
     def get_filtered_captions(self, image_embedding, wordToIds, padID, window_length):
         """

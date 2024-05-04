@@ -7,6 +7,8 @@ import csv
 import urllib.request
 import os
 
+from groberta import Groberta
+
 
 def print_captions_and_label(captions: list[str], task: str):
   MODEL = f"cardiffnlp/twitter-roberta-base-{task}"
@@ -32,6 +34,9 @@ def print_captions_and_label(captions: list[str], task: str):
     scores = output[0][0].numpy()
     scores = softmax(scores)
 
+    print(labels[0], scores[0])
+    print(labels[1], scores[1])
+
     # ranking
     ranking = np.argsort(scores)
     ranking = ranking[::-1]
@@ -41,5 +46,11 @@ def print_captions_and_label(captions: list[str], task: str):
         print(f"{i+1}) {l} {np.round(float(s), 4)}")
     print()
 
+def second(text):
+    model = Groberta()
+    score = model.compute_offensive_score(text)
+    print(score)
+
 if __name__ == "__main__":
-    print_captions_and_label(["hey girl, you are mean"], "offensive")
+    # print_captions_and_label(["hey girl, you are mean", "hey girl, you are good", "hey girl, you are terrible"], "offensive")
+    second(["hey girl, you are mean", "hey girl, you are good", "hey girl, you are terrible"])
