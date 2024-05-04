@@ -63,8 +63,8 @@ def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
             img_array = np.array(img.resize((299,299)))
         img_in = tf.keras.applications.inception_v3.preprocess_input(img_array)[np.newaxis, :]
         image_features += [gap(inception(img_in))]
-        if i < vis_subset:
-            vis_images += [img_array]
+        # if i < vis_subset:
+        vis_images += [img_array]
     print()
     return image_features, vis_images
 
@@ -159,8 +159,8 @@ def load_data(data_folder):
         np.random.shuffle(good_caps)
         top_captions.extend(good_caps[:n])
       return top_captions
-    train_captions = get_part_captions(train_captions)
-    test_captions = get_part_captions(test_captions)
+    train_captions = get_part_captions(train_captions, 150)
+    test_captions = get_part_captions(test_captions, 150)
 
     # pad captions so they all have equal length
     def pad_captions(captions, window_size):
