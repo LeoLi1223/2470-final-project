@@ -1,0 +1,4 @@
+.DS_Store
+./memes900k/data.p
+./code/__pycache__/*
+./GloVE
