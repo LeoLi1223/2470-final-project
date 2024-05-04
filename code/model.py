@@ -8,10 +8,21 @@ from scipy.special import softmax
 import csv
 import urllib.request
 
+from transformers.utils import logging
+logging.set_verbosity_error() 
 
 task='offensive'
 MODEL_OFFENSIVE = f"cardiffnlp/twitter-roberta-base-{task}"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_OFFENSIVE)
+
+# download label mapping
+task = 'offensive'
+labels=[]
+mapping_link = f"https://raw.githubusercontent.com/cardiffnlp/tweeteval/main/datasets/{task}/mapping.txt"
+with urllib.request.urlopen(mapping_link) as f:
+    html = f.read().decode('utf-8').split("\n")
+    csvreader = csv.reader(html, delimiter='\t')
+labels = [row[1] for row in csvreader if len(row) > 1]
 
 class ImageCaptionModel(tf.keras.Model):
 
@@ -101,28 +112,17 @@ class ImageCaptionModel(tf.keras.Model):
         return avg_prp, avg_acc
 
     def get_offensive_score(self, text):
-        # download label mapping
-        task = 'offensive'
-        labels=[]
-        mapping_link = f"https://raw.githubusercontent.com/cardiffnlp/tweeteval/main/datasets/{task}/mapping.txt"
-        with urllib.request.urlopen(mapping_link) as f:
-            html = f.read().decode('utf-8').split("\n")
-            csvreader = csv.reader(html, delimiter='\t')
-        labels = [row[1] for row in csvreader if len(row) > 1]
-
-        # TF
-        model = TFAutoModelForSequenceClassification.from_pretrained(MODEL_OFFENSIVE)
-        model.save_pretrained(MODEL_OFFENSIVE)
+        tf_model = TFAutoModelForSequenceClassification.from_pretrained(MODEL_OFFENSIVE)
+        tf_model.save_pretrained(MODEL_OFFENSIVE)
 
         encoded_input = tokenizer(text, return_tensors='tf')
-        output = model(encoded_input)
+        output = tf_model(encoded_input)
         scores = output[0][0].numpy()
         scores = softmax(scores)
 
         ranking = np.argsort(scores)
         ranking = ranking[::-1]
         for i in range(scores.shape[0]):
-            l = labels[ranking[i]]
             s = scores[ranking[i]]
         return np.round(float(s), 4)
 
@@ -210,17 +210,6 @@ def accuracy_function(prbs, labels, mask):
 
 
 def loss_function(prbs, labels, mask):
-    """
-    DO NOT CHANGE
-
-    Calculates the model cross-entropy loss after one forward pass
-    Please use reduce sum here instead of reduce mean to make things easier in calculating per symbol accuracy.
-
-    :param prbs:  float tensor, word prediction probabilities [batch_size x window_size x english_vocab_size]
-    :param labels:  integer tensor, word prediction labels [batch_size x window_size]
-    :param mask:  tensor that acts as a padding mask [batch_size x window_size]
-    :return: the loss of the model as a tensor
-    """
     masked_labs = tf.boolean_mask(labels, mask)
     masked_prbs = tf.boolean_mask(prbs, mask)
     scce = tf.keras.losses.sparse_categorical_crossentropy(masked_labs, masked_prbs, from_logits=True)
