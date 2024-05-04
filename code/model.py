@@ -8,6 +8,7 @@ from scipy.special import softmax
 import csv
 import urllib.request
 from groberta import Groberta
+from model_utils import gen_captions
 
 
 task='offensive'
@@ -19,6 +20,7 @@ class ImageCaptionModel(tf.keras.Model):
     def __init__(self, decoder, **kwargs):
         super().__init__(**kwargs)
         self.decoder = decoder
+        self.groberta = Groberta()
 
     @tf.function
     def call(self, encoded_images, captions):
@@ -47,7 +49,7 @@ class ImageCaptionModel(tf.keras.Model):
                 probs = self(batch_image_features, decoder_input)
                 mask = decoder_labels != padding_index
                 num_predictions = tf.reduce_sum(tf.cast(mask, tf.float32))
-                loss = self.loss_function(probs, decoder_labels, mask)
+                loss = self.loss_function(probs, decoder_labels, mask) + self.get_offensive_score(train_image_features)
                 accuracy = self.accuracy_function(tf.cast(probs, tf.int64), tf.cast(decoder_labels, tf.int64), mask)
             
             ## update weights
@@ -87,7 +89,7 @@ class ImageCaptionModel(tf.keras.Model):
             probs = self(batch_image_features, decoder_input)
             mask = decoder_labels != padding_index
             num_predictions = tf.reduce_sum(tf.cast(mask, tf.float32))
-            loss = self.loss_function(probs, decoder_labels, mask)
+            loss = self.loss_function(probs, decoder_labels, mask) + self.get_offensive_score(test_image_features)
             accuracy = self.accuracy_function(probs, decoder_labels, mask)
 
             ## Compute and report on aggregated statistics
@@ -101,26 +103,10 @@ class ImageCaptionModel(tf.keras.Model):
             print(f"\r[Valid {index+1}/{num_batches}]\t loss={avg_loss:.3f}\t acc: {avg_acc:.3f}\t perp: {avg_prp:.3f}", end='')      
         return avg_prp, avg_acc
 
-    def get_offensive_score(self, text):
-        # download label mapping
-        task = 'offensive'
-        labels=[]
-        mapping_link = f"https://raw.githubusercontent.com/cardiffnlp/tweeteval/main/datasets/{task}/mapping.txt"
-        with urllib.request.urlopen(mapping_link) as f:
-            html = f.read().decode('utf-8').split("\n")
-            csvreader = csv.reader(html, delimiter='\t')
-        labels = [row[1] for row in csvreader if len(row) > 1]
-
-        # TF
-        model = TFAutoModelForSequenceClassification.from_pretrained(MODEL_OFFENSIVE)
-        model.save_pretrained(MODEL_OFFENSIVE)
-
-        encoded_input = tokenizer(text, return_tensors='tf')
-        output = model(encoded_input)
-        scores = output[0][0].numpy()
-        scores = softmax(scores)
-
-        return scores[1]
+    def get_offensive_score(self, image_embeddings):
+        captions = gen_captions(self, image_embeddings, self.decoder.word2idx, self.decoder.word2idx['<pad>'], 0.05, self.decoder.window_size)
+        offensive_scores = self.groberta.compute_offensive_scores(captions)
+        return tf.reduce_sum(offensive_scores)
 
     def get_filtered_captions(self, image_embedding, wordToIds, padID, window_length):
         """

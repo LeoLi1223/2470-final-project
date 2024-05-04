@@ -90,7 +90,7 @@ def main(args):
             vocab_size  = len(word2idx), 
             hidden_size = args.hidden_size, 
             window_size = args.window_size,
-            embedding_matrix = get_embedding_matrix(word2idx)
+            word2idx=word2idx,
         )
         
         model = ImageCaptionModel(decoder)
@@ -174,7 +174,8 @@ def train_model(model, captions, img_feats, pad_idx, args, valid):
         for epoch in range(args.epochs):
             stats += [model.train(captions, img_feats, pad_idx, batch_size=args.batch_size)]
             if args.check_valid:
-                model.test(valid[0], valid[1], pad_idx, batch_size=args.batch_size)
+                prp, acc = model.test(valid[0], valid[1], pad_idx, batch_size=args.batch_size)
+                print(f"\r[epoch {epoch}]\t avg_prp:{prp}\t avg_acc:{acc}", end="\n")
     except KeyboardInterrupt as e:
         if epoch > 0:
             print("Key-value interruption. Trying to early-terminate. Interrupt again to not do that!")

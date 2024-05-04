@@ -25,7 +25,7 @@ class Groberta:
         self.model = TFAutoModelForSequenceClassification.from_pretrained(MODEL)
         self.model.save_pretrained(MODEL)
     
-    def compute_offensive_score(self, captions: list[str]):
+    def compute_offensive_scores(self, captions: list[str]):
         out = []
         for caption in captions:
             encoded_input = self.tokenizer(caption, return_tensors='tf')
