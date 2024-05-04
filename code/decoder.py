@@ -17,7 +17,6 @@ class RNNDecoder(tf.keras.layers.Layer):
         self.window_size = window_size
         self.embedding_matrix = embedding_matrix
 
-        # TODO:
         # Now we will define image and word embedding, decoder, and classification layers
 
         # Define feed forward layer(s) to embed image features into a vector 
@@ -25,7 +24,7 @@ class RNNDecoder(tf.keras.layers.Layer):
         self.image_embedding = tf.keras.layers.Dense(self.hidden_size)
 
         # Define english embedding layer:
-        self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.hidden_size, trainable=True) ##TODO: replace with GloVE
+        self.embedding = tf.keras.layers.Embedding(self.vocab_size, self.hidden_size, trainable=True)
         self.embedding.build((1,))
         self.embedding.set_weights([self.embedding_matrix])
 
@@ -36,7 +35,6 @@ class RNNDecoder(tf.keras.layers.Layer):
         self.classifier = tf.keras.layers.Dense(self.vocab_size)
 
     def call(self, encoded_images, captions):
-        # TODO:
         # 1) Embed the encoded images into a vector of the correct dimension for initial state
         # 2) Pass your english sentance embeddings, and the image embeddings, to your decoder 
         # 3) Apply dense layer(s) to the decoder to generate prediction **logits**
@@ -72,8 +70,7 @@ class TransformerDecoder(tf.keras.Model):
         self.classifier = tf.keras.layers.Dense(vocab_size)
 
     def call(self, encoded_images, captions):
-        # TODO:
-        # 1) Embed the encoded images into a vector (HINT IN NOTEBOOK)
+        # 1) Embed the encoded images into a vector
         # 2) Pass the captions through your positional encoding layer
         # 3) Pass the english embeddings and the image sequences to the decoder
         # 4) Apply dense layer(s) to the decoder out to generate **logits**
@@ -89,5 +86,6 @@ class TransformerDecoder(tf.keras.Model):
             'vocab_size': self.vocab_size,
             'hidden_size': self.hidden_size,
             'window_size': self.window_size,
+            'embedding_matrix': self.embedding_matrix,
         })
         return config

@@ -85,7 +85,7 @@ def load_data(data_folder):
 
     #map each image name to a list containing all 3000 of its captons
     image_names_to_captions = {}
-    simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", ""))
+    simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", "")).replace("帽", "")
     for example in examples:
         l = example.split("\t")
         img_name, caption = simplify(l[0]), l[2]
@@ -106,16 +106,16 @@ def load_data(data_folder):
                 to_return.append(caption)
         return to_return
     
-    def get_part_captions(image_names, n = 50):
-        to_return = []
-        for image in image_names:
-            captions = image_names_to_captions[image]
-            random.shuffle(captions)
-            captions = captions[:n]
-            image_names_to_captions[image] = captions
-            for caption in captions:
-                to_return.append(caption)
-        return to_return
+    # def get_part_captions(image_names, n = 50):
+    #     to_return = []
+    #     for image in image_names:
+    #         captions = image_names_to_captions[image]
+    #         random.shuffle(captions)
+    #         captions = captions[:n]
+    #         image_names_to_captions[image] = captions
+    #         for caption in captions:
+    #             to_return.append(caption)
+    #     return to_return
 
 
     # get lists of all the captions in the train and testing set
@@ -150,10 +150,15 @@ def load_data(data_folder):
       for start in range(0, len(captions), 3000):
         end = start + 3000
         caps = captions[start:end]
-        sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
-        top_captions.extend(sorted_caps[:n])
+        # print(caps[:5])
+        good_caps = list(filter(lambda x: x.count("<unk>") < 2, caps))
+        assert len(caps) >= 50
+        # sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
+        # top_captions.extend(caps[:n])
+        # print(caps[:5])
+        np.random.shuffle(good_caps)
+        top_captions.extend(good_caps[:n])
       return top_captions
-
     train_captions = get_part_captions(train_captions)
     test_captions = get_part_captions(test_captions)
 

@@ -149,6 +149,9 @@ def load_model(args):
     model.test    = partial(ImageCaptionModel.test,    model)
     model.train   = partial(ImageCaptionModel.train,   model)
     model.compile = partial(ImageCaptionModel.compile, model)
+    model.get_filtered_captions = partial(ImageCaptionModel.get_filtered_captions, model)
+    model.get_unfiltered_captions = partial(ImageCaptionModel.get_unfiltered_captions, model)
+    model.get_offensive_score = partial(ImageCaptionModel.get_offensive_score, model)
     compile_model(model, args)
     print(f"Model loaded from '{args.chkpt_path}'")
     return model
