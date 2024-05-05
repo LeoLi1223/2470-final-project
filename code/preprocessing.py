@@ -145,22 +145,22 @@ def load_data(data_folder):
     def count_unk_symbols(caption):
         return caption.count("<unk>")
 
-    def get_part_captions(captions, n=50):
+    def get_part_captions(captions, n):
       top_captions = []
       for start in range(0, len(captions), 3000):
         end = start + 3000
         caps = captions[start:end]
         # print(caps[:5])
         good_caps = list(filter(lambda x: x.count("<unk>") < 2, caps))
-        assert len(caps) >= 50
+        assert len(caps) >= n
         # sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
         # top_captions.extend(caps[:n])
         # print(caps[:5])
         np.random.shuffle(good_caps)
         top_captions.extend(good_caps[:n])
       return top_captions
-    train_captions = get_part_captions(train_captions, 150)
-    test_captions = get_part_captions(test_captions, 150)
+    train_captions = get_part_captions(train_captions, 100)
+    test_captions = get_part_captions(test_captions, 100)
 
     # pad captions so they all have equal length
     def pad_captions(captions, window_size):

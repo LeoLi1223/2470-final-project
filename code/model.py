@@ -34,6 +34,7 @@ class ImageCaptionModel(tf.keras.Model):
 
     def train(self, train_captions, train_image_features, padding_index, batch_size=30):
         total_loss = total_seen = total_correct = 0
+        assert len(train_captions) == len(train_image_features)
         shuffled_indices = tf.random.shuffle(tf.range(0, len(train_captions)))
         train_captions = tf.gather(train_captions, shuffled_indices)
         train_image_features = tf.gather(train_image_features, shuffled_indices)
