@@ -19,16 +19,17 @@ def print_captions_and_label(captions, task):
       csvreader = csv.reader(html, delimiter='\t')
   labels = [row[1] for row in csvreader if len(row) > 1]
 
-  # PT
-  model = AutoModelForSequenceClassification.from_pretrained(MODEL)
-  model.save_pretrained(MODEL)
+  tf_model = TFAutoModelForSequenceClassification.from_pretrained(MODEL)
+  tf_model.save_pretrained(MODEL)
 
-  for caption in tra_captions:
+  
+
+
+  for caption in captions:
     print(caption)
-    text = caption
-    encoded_input = tokenizer(text, return_tensors='pt')
-    output = model(**encoded_input)
-    scores = output[0][0].detach().numpy()
+    encoded_input = tokenizer(caption, return_tensors='tf')
+    output = tf_model(encoded_input)
+    scores = output[0][0].numpy()
     scores = softmax(scores)
 
     # ranking

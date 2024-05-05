@@ -120,19 +120,15 @@ class ImageCaptionModel(tf.keras.Model):
         scores = output[0][0].numpy()
         scores = softmax(scores)
 
-        ranking = np.argsort(scores)
-        ranking = ranking[::-1]
-        for i in range(scores.shape[0]):
-            s = scores[ranking[i]]
-        return np.round(float(s), 4)
+        return scores[1]
 
     def get_filtered_captions(self, image_embedding, wordToIds, padID, window_length):
         """
         Function used to generate a caption using an ImageCaptionModel given
         an image embedding. 
         """
-        temp = 0.05
-        while temp < 0.2:
+        temp = 0.15
+        while temp < 0.5:
             idsToWords = {id: word for word, id in wordToIds.items()}
             unk_token = wordToIds['<unk>']
             caption_so_far = [wordToIds['<start>']]
@@ -149,7 +145,7 @@ class ImageCaptionModel(tf.keras.Model):
                 caption_so_far.append(next_token)
             text = ' '.join([idsToWords[x] for x in caption_so_far][1:-1])
             offensive_score = self.get_offensive_score(text)
-            if offensive_score > 0.5:
+            if offensive_score > 0.3:
                 temp = temp + 0.05
             else:
                 return text, offensive_score
@@ -160,7 +156,7 @@ class ImageCaptionModel(tf.keras.Model):
         Function used to generate a caption using an ImageCaptionModel given
         an image embedding. 
         """
-        temp = 0.05
+        temp = 0.15
         idsToWords = {id: word for word, id in wordToIds.items()}
         unk_token = wordToIds['<unk>']
         caption_so_far = [wordToIds['<start>']]
