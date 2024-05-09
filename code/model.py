@@ -7,6 +7,9 @@ from scipy.special import softmax
 import csv
 import urllib.request
 
+from transformers.utils import logging
+logging.set_verbosity_error()
+
 task = 'offensive'
 MODEL_OFFENSIVE = f"cardiffnlp/twitter-roberta-base-{task}"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_OFFENSIVE)
@@ -147,12 +150,12 @@ class ImageCaptionModel(tf.keras.Model):
         scores = output[0][0].numpy()
         scores = softmax(scores)
 
-        ranking = np.argsort(scores)
-        ranking = ranking[::-1]
-        for i in range(scores.shape[0]):
-            l = labels[ranking[i]]
-            s = scores[ranking[i]]
-        return np.round(float(s), 4)
+        # ranking = np.argsort(scores)
+        # ranking = ranking[::-1]
+        # for i in range(scores.shape[0]):
+        #     l = labels[ranking[i]]
+        #     s = scores[ranking[i]]
+        return np.round(float(scores[1]), 4)
 
     def gen_caption_temperature(self, image_embedding, wordToIds, padID, temp, window_length):
         """
@@ -180,11 +183,11 @@ class ImageCaptionModel(tf.keras.Model):
         Function used to generate a caption using an ImageCaptionModel given
         an image embedding. 
         """
-        temp = 0.05
-        while temp < 0.2:
+        temp = 0.1
+        while temp < 0.6:
             text = self.gen_caption_temperature(image_embedding, wordToIds, padID, temp, window_length)
             offensive_score = self.get_offensive_score(text)
-            if offensive_score > 0.5:
+            if offensive_score > 0.35:
                 temp = temp + 0.05
             else:
                 return text, offensive_score
@@ -195,7 +198,7 @@ class ImageCaptionModel(tf.keras.Model):
         Function used to generate a caption using an ImageCaptionModel given
         an image embedding. 
         """
-        temp = 0.05
+        temp = 0.1
         text = self.gen_caption_temperature(image_embedding, wordToIds, padID, temp, window_length)
         offensive_score = self.get_offensive_score(text)
         return text, offensive_score
