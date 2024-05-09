@@ -25,22 +25,44 @@ def preprocess_captions(captions, window_size):
         # Replace the old caption in the captions list with this new cleaned caption
         captions[i] = caption_new
 
-def get_image_features(image_names, data_folder, vis_subset=100):
+# def get_image_features(image_names, data_folder, vis_subset=100):
+#     '''
+#     Method used to extract the features from the images in the dataset using ResNet50
+#     '''
+#     image_features = []
+#     vis_images = []
+#     resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
+#     gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
+#     pbar = tqdm(image_names)
+#     for i, image_name in enumerate(pbar):
+#         img_path = f'{data_folder}/images/{image_name}.jpg'
+#         pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
+#         with Image.open(img_path) as img:
+#             img_array = np.array(img.resize((224,224)))
+#         img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
+#         image_features += [gap(resnet(img_in))]
+#         if i < vis_subset:
+#             vis_images += [img_array]
+#     print()
+#     return image_features, vis_images
+
+
+def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
     '''
     Method used to extract the features from the images in the dataset using ResNet50
     '''
     image_features = []
     vis_images = []
-    resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
+    inception = tf.keras.applications.InceptionV3(False)  ## Produces Bx8x8x2048
     gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
     pbar = tqdm(image_names)
     for i, image_name in enumerate(pbar):
         img_path = f'{data_folder}/images/{image_name}.jpg'
-        pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
+        pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D Inception V3 GAP Vector")
         with Image.open(img_path) as img:
-            img_array = np.array(img.resize((224,224)))
-        img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
-        image_features += [gap(resnet(img_in))]
+            img_array = np.array(img.resize((299,299)))
+        img_in = tf.keras.applications.inception_v3.preprocess_input(img_array)[np.newaxis, :]
+        image_features += [gap(inception(img_in))]
         if i < vis_subset:
             vis_images += [img_array]
     print()
@@ -72,7 +94,7 @@ def load_data(data_folder):
 
     #randomly split examples into training and testing sets
     shuffled_images = list(image_names_to_captions.keys())
-    random.seed(0)
+    random.seed(25)
     random.shuffle(shuffled_images)
     train_image_names = shuffled_images[60:]
     test_image_names = shuffled_images[:60]
@@ -125,24 +147,25 @@ def load_data(data_folder):
     def count_unk_symbols(caption):
         return caption.count("<unk>")
 
-    def get_part_captions(captions, n=50):
-      top_captions = []
-      for start in range(0, len(captions), 3000):
-        end = start + 3000
-        caps = captions[start:end]
-        sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
-        top_captions.extend(sorted_caps[:n])
-      return top_captions
-    
     # def get_part_captions(captions, n=50):
     #   top_captions = []
     #   for start in range(0, len(captions), 3000):
     #     end = start + 3000
     #     caps = captions[start:end]
-    #     filtered_captions = [caption for caption in caps if count_unk_symbols(caption) <= 2]
-    #     random.shuffle(filtered_captions)
-    #     top_captions.extend(filtered_captions[:n])
+    #     sorted_caps = sorted(caps, key=lambda cap: count_unk_symbols(cap))
+    #     top_captions.extend(sorted_caps[:n])
     #   return top_captions
+    
+    def get_part_captions(captions, n=100):
+      top_captions = []
+      for start in range(0, len(captions), 3000):
+        end = start + 3000
+        caps = captions[start:end]
+        good_caps = list(filter(lambda x: x.count("<unk>") < 2, caps))
+        assert len(caps) >= 50
+        np.random.shuffle(good_caps)
+        top_captions.extend(good_caps[:n])
+      return top_captions
 
     train_captions = get_part_captions(train_captions)
     test_captions = get_part_captions(test_captions)
@@ -179,9 +202,11 @@ def load_data(data_folder):
     
     # use ResNet50 to extract image features
     print("Getting training embeddings")
-    train_image_features, train_images = get_image_features(train_image_names, data_folder)
+    # train_image_features, train_images = get_image_features(train_image_names, data_folder)
+    train_image_features, train_images = get_image_features_inceptionV3(train_image_names, data_folder)
     print("Getting testing embeddings")
-    test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
+    # test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
+    test_image_features,  test_images  = get_image_features_inceptionV3(test_image_names, data_folder)
 
     return dict(
         train_captions          = np.array(train_captions),
