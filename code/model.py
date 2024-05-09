@@ -79,14 +79,6 @@ class ImageCaptionModel(tf.keras.Model):
 
         total_loss = total_seen = total_correct = 0
         for index, end in enumerate(range(batch_size, len(test_captions)+1, batch_size)):
-
-            # NOTE: 
-            # - The captions passed to the decoder should have the last token in the window removed:
-            #	 [<START> student working on homework <STOP>] --> [<START> student working on homework]
-            #
-            # - When computing loss, the decoder labels should have the first word removed:
-            #	 [<START> student working on homework <STOP>] --> [student working on homework <STOP>]
-
             ## Get the current batch of data, making sure to try to predict the next word
             start = end - batch_size
             batch_image_features = test_image_features[start:end, :]
@@ -191,13 +183,9 @@ class ImageCaptionModel(tf.keras.Model):
 
 def accuracy_function(prbs, labels, mask):
     """
-    DO NOT CHANGE
-
-    Computes the batch accuracy
-
-    :param prbs:  float tensor, word prediction probabilities [BATCH_SIZE x WINDOW_SIZE x VOCAB_SIZE]
-    :param labels:  integer tensor, word prediction labels [BATCH_SIZE x WINDOW_SIZE]
-    :param mask:  tensor that acts as a padding mask [BATCH_SIZE x WINDOW_SIZE]
+    :param prbs:  float tensor, word prediction probabilities
+    :param labels:  integer tensor, word prediction labels
+    :param mask:  tensor that acts as a padding mask
     :return: scalar tensor of accuracy of the batch between 0 and 1
     """
     correct_classes = tf.argmax(prbs, axis=-1) == labels

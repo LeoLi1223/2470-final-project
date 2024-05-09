@@ -55,7 +55,7 @@ def get_maximal_font(img, text, font_size=64, text_width=0.94, font_path=MEME_FO
     w, h = font.getsize(text)
 
     # find the biggest font size that works
-    while w > img.shape[0] * text_width:
+    while w > img.width * text_width:
         font_size = font_size - 1
         font = ImageFont.truetype(font_path, font_size)
         w, h = font.getsize(text)
@@ -81,7 +81,7 @@ def _get_initial_font(img, texts, max_chars=20, font_path=MEME_FONT_PATH):
     longest_text = 'G' * max_len
 
     # get initial font size from image dimensions
-    font_size = int(img.shape[0] / 5.4)
+    font_size = int(img.width / 5.4)
 
     # get maximal font for the initial text
     font = get_maximal_font(img, longest_text, font_size, font_path=font_path)
@@ -101,7 +101,7 @@ def _get_final_font(img, text_lines, font_path=MEME_FONT_PATH):
         PIL.ImageFont: optimal font
     """
     # initial font size
-    font_size = int(img.shape[0] / 5.4) // max(map(len, text_lines))
+    font_size = int(img.width / 5.4) // max(map(len, text_lines))
     font = ImageFont.truetype(font_path, font_size)
 
     # find the text with the highest occupied width
@@ -132,8 +132,8 @@ def split_to_lines(img, text, font):
 
     # compute the number of lines
     line_count = 1
-    if w > img.shape[0]:
-        line_count = w // img.shape[0] + 1
+    if w > img.width:
+        line_count = w // img.width + 1
 
     lines = []
     if line_count > 1:
@@ -160,7 +160,7 @@ def split_to_lines(img, text, font):
 
             # does line still fit?
             w, h = draw.textsize(line, font)
-            if not is_last and w > img.shape[0] * 0.95:
+            if not is_last and w > img.width * 0.95:
                 next_cut -= 1
                 while text[next_cut] != " ":
                     next_cut -= 1
@@ -194,12 +194,12 @@ def caption_image(img, text_lines, font, pos='top'):
     # compute the position of text on y-axis
     last_y = -h
     if pos == 'bottom':
-        last_y = img.shape[0] * 0.987 - h * (len(text_lines) + 1) - border_size
+        last_y = img.height * 0.987 - h * (len(text_lines) + 1) - border_size
 
     # draw text lines
     for line in text_lines:
         w, h = draw.textsize(line, font)
-        x = img.shape[0] / 2 - w / 2
+        x = img.height / 2 - w / 2
         y = last_y + h
 
         # add borders of black color
