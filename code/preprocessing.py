@@ -10,9 +10,7 @@ from read_glove import get_glove_embedding
 
 def preprocess_captions(captions, window_size):
     for i, caption in enumerate(captions):
-        # Taken from:
-        # https://towardsdatascience.com/image-captions-with-attention-in-tensorflow-step-by-step-927dad3569fa
-
+        
         # Convert the caption to lowercase, and then remove all special characters from it
         caption_nopunct = re.sub(r"[^a-zA-Z0-9]+", ' ', caption.lower())
     
@@ -26,30 +24,9 @@ def preprocess_captions(captions, window_size):
         # Replace the old caption in the captions list with this new cleaned caption
         captions[i] = caption_new
 
-# def get_image_features(image_names, data_folder, vis_subset=100):
-#     '''
-#     Method used to extract the features from the images in the dataset using ResNet50
-#     '''
-#     image_features = []
-#     vis_images = []
-#     resnet = tf.keras.applications.ResNet50(False)  ## Produces Bx7x7x2048
-#     gap = tf.keras.layers.GlobalAveragePooling2D()  ## Produces Bx2048
-#     pbar = tqdm(image_names)
-#     for i, image_name in enumerate(pbar):
-#         img_path = f'{data_folder}/images/{image_name}.jpg'
-#         pbar.set_description(f"[({i+1}/{len(image_names)})] Processing '{img_path}' into 2048-D ResNet GAP Vector")
-#         with Image.open(img_path) as img:
-#             img_array = np.array(img.resize((224,224)))
-#         img_in = tf.keras.applications.resnet50.preprocess_input(img_array)[np.newaxis, :]
-#         image_features += [gap(resnet(img_in))]
-#         if i < vis_subset:
-#             vis_images += [img_array]
-#     print()
-#     return image_features, vis_images
-
 def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
     '''
-    Method used to extract the features from the images in the dataset using ResNet50
+    Method used to extract the features from the images in the dataset using InceptionV3
     '''
     image_features = []
     vis_images = []
@@ -69,15 +46,6 @@ def get_image_features_inceptionV3(image_names, data_folder, vis_subset=100):
     return image_features, vis_images
 
 def load_data(data_folder):
-    '''
-    Method that was used to preprocess the data in the data.p file. You do not need 
-    to use this method, nor is this used anywhere in the assignment. This is the method
-    that the TAs used to pre-process the Flickr 8k dataset and create the data.p file 
-    that is in your assignment folder. 
-
-    Feel free to ignore this, but please read over this if you want a little more clairity 
-    on how the images and captions were pre-processed 
-    '''
     text_file_path = f'{data_folder}/captions.txt'
 
     with open(text_file_path) as file:
@@ -85,7 +53,7 @@ def load_data(data_folder):
 
     #map each image name to a list containing all 3000 of its captons
     image_names_to_captions = {}
-    simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", "")).replace("帽", "")
+    simplify = lambda text: re.sub(r"[-_]+", "-", re.sub(r"[^\w\s-]+", "", text.lower().strip().replace("_", "-")).replace(" ", "-").replace("ñ", ""))
     for example in examples:
         l = example.split("\t")
         img_name, caption = simplify(l[0]), l[2]
@@ -145,7 +113,7 @@ def load_data(data_folder):
     def count_unk_symbols(caption):
         return caption.count("<unk>")
 
-    def get_part_captions(captions, n=50):
+    def get_part_captions(captions, n=100):
       top_captions = []
       for start in range(0, len(captions), 3000):
         end = start + 3000
@@ -186,12 +154,10 @@ def load_data(data_folder):
             else:
                 caption[index] = word2idx[word]
 
-    # use ResNet50 to extract image features
+    # use InceptionV3 to extract image features
     print("Getting training embeddings")
-    # train_image_features, train_images = get_image_features(train_image_names, data_folder)
     train_image_features, train_images = get_image_features_inceptionV3(train_image_names, data_folder)
     print("Getting testing embeddings")
-    # test_image_features,  test_images  = get_image_features(test_image_names, data_folder)
     test_image_features,  test_images  = get_image_features_inceptionV3(test_image_names, data_folder)
     
     return dict(
